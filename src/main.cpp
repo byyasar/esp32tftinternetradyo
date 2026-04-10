@@ -46,41 +46,39 @@ const char* password = "uTF52pvs";
 
 // Istasyon Listesi (Sadece HTTP - Calisan Linkler)
 const char *stations[] = {
-    // 1. POP / HIT MUZIK
     "http://kralpopwmp.radyotvonline.com/kralpopmp3",
     "http://officialbestfm.radyotvonline.net/bestfmofficial",
+    "http://radyo.yayindakiler.com:4044/;;",
     "http://46.20.3.231/radyovivampeg",
+    "http://ntvrdwmp.radyotvonline.com/ntvradyomp3",
+    "http://stream.radyo45lik.com:4545/stream",
+    "http://kralfmwmp.radyotvonline.com/kralfmmp3",
+    "http://officialbestfm.radyotvonline.net/babaradyo",
+    "http://radyo.yayindakiler.com:4112/;;",
     "http://radyo.yayin.com.tr:5894/;",
     "http://radyo.yayin.com.tr:4052/;",
     "http://radyo.yayindakiler.com:3000/;",
-    // 2. ARABESK / NOSTALJI
-    "http://anadolu.liderhost.com.tr:10886/;",
-    "http://stream.radyo45lik.com:4545/stream",
-    // 3. HABER / GENEL
-    "http://ntvrdwmp.radyotvonline.com/ntvradyomp3",
-    "http://trt.radyotvonline.net/trthaber",
-    "http://trt.radyotvonline.net/trtradyo1",
-    "http://trt.radyotvonline.net/trtfm",
-    // 4. TURKU / KULTUR
-    "http://yayin.turkhosted.com:6006/stream",
     "http://radyo.yayindakiler.com:4174/;",
-    "http://yayin.turkhosted.com:4591/4591/stream"
+    "http://yayin.turkhosted.com:6006/stream",
+    "http://radyo.yayin.com.tr:4130/;",
+    "http://46.20.3.229/",
+    "http://live.bodrumfm.org/stream.mp3",
+    "http://usa4.fastcast4u.com:5414",
+    "http://95.173.162.184:7350/"
 };
 
 const char *sName[] = {
-    "KRAL POP", "BEST FM", "RADYO VIVA", "RADYO KULUP", "RADYO MEGA",
-    "RADYO EREGLI",
-    "GENERAL FM", "RADYO 45LIK",
-    "NTV RADYO", "TRT HABER", "TRT RADYO 1", "TRT FM",
-    "RADYO EKIN", "RADYO CAN", "TURKU RADYO"
+    "KRAL POP", "BEST FM", "SLOW TURK", "RADYO VIVA", "NTV RADYO",
+    "RADYO 45LIK", "KRAL FM", "BABA RADYO", "RADYO CAN", "RADYO KULUP",
+    "RADYO MEGA", "GENC KRAL", "RADYO EREGLI", "RADYO EKIN", "ISTANBUL FM",
+    "SHOW RADYO", "BODRUM FM", "IZMIR FM", "DESIBEL 94"
 };
 
 const char *sGenre[] = {
-    "Pop Muzik", "Pop Muzik", "Pop Muzik", "Pop Muzik", "Pop Muzik",
-    "Pop Muzik",
-    "Arabesk", "Nostalji",
-    "Haber", "Haber", "Genel", "Kultur",
-    "Turku", "Turku", "Turku"
+    "Pop Muzik", "Pop Muzik", "Slow Muzik", "Pop Muzik", "Haber",
+    "Nostalji", "Arabesk", "Arabesk", "Turku", "Pop Muzik",
+    "Pop Muzik", "Pop Muzik", "Pop Muzik", "Turku", "Pop Muzik",
+    "Pop Muzik", "Pop Muzik", "Pop Muzik", "Pop Muzik"
 };
 
 int currentStation = 0; 
