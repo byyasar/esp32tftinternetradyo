@@ -59,6 +59,7 @@ const char *stations[] = {
     // 3. HABER / GENEL
     "http://ntvrdwmp.radyotvonline.com/ntvradyomp3",
     "http://trt.radyotvonline.net/trthaber",
+    "http://trt.radyotvonline.net/trtradyo1",
     "http://trt.radyotvonline.net/trtfm",
     // 4. TURKU / KULTUR
     "http://yayin.turkhosted.com:6006/stream",
@@ -70,7 +71,7 @@ const char *sName[] = {
     "KRAL POP", "BEST FM", "RADYO VIVA", "RADYO KULUP", "RADYO MEGA",
     "RADYO EREGLI",
     "GENERAL FM", "RADYO 45LIK",
-    "NTV RADYO", "TRT HABER", "TRT FM",
+    "NTV RADYO", "TRT HABER", "TRT RADYO 1", "TRT FM",
     "RADYO EKIN", "RADYO CAN", "TURKU RADYO"
 };
 
@@ -78,7 +79,7 @@ const char *sGenre[] = {
     "Pop Muzik", "Pop Muzik", "Pop Muzik", "Pop Muzik", "Pop Muzik",
     "Pop Muzik",
     "Arabesk", "Nostalji",
-    "Haber", "Haber", "Kultur",
+    "Haber", "Haber", "Genel", "Kultur",
     "Turku", "Turku", "Turku"
 };
 
