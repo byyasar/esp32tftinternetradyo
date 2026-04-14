@@ -1,0 +1,160 @@
+{
+  "project_name": "ESP32-S3 Internet Radio",
+  "hardware": {
+    "board": "ESP32-S3 N16R8 (4D Systems Gen4)",
+    "display": "ILI9341 (320x240 TFT)",
+    "audio_decoder": "VS1053B / VS1003B",
+    "touch_controller": "XPT2046"
+  },
+  "pinout": {
+    "tft_display": {
+      "mosi": 45,
+      "miso": 46,
+      "sclk": 3,
+      "cs": 14,
+      "dc": 47,
+      "rst": 21,
+      "backlight": -1
+    },
+    "vs1053_audio": {
+      "mosi": 11,
+      "miso": 13,
+      "sclk": 12,
+      "cs": 10,
+      "dcs": 9,
+      "dreq": 8,
+      "rst": 18,
+      "spi_bus": "HSPI"
+    },
+    "touch_screen": {
+      "din_mosi": 2,
+      "do_miso": 41,
+      "clk": 42,
+      "cs": 1,
+      "spi_bus": "FSPI/SPI0"
+    }
+  },
+  "firmware_settings": {
+    "platform": "espressif32",
+    "framework": "arduino",
+    "monitor_speed": 115200,
+    "flash_mode": "qio_opi",
+    "flash_size": "16MB",
+    "psram": "enabled",
+    "partitions": "default_16MB.csv"
+  },
+  "libraries": [
+    "bodmer/TFT_eSPI @ ^2.5.43",
+    "ESP32-vs1053_ext (Custom/Git)",
+    "https://github.com/PaulStoffregen/XPT2046_Touchscreen.git",
+    "bblanchon/ArduinoJson @ ^6.21.3"
+  ],
+  "wifi_credentials": {
+    "ssid": "ASUS",
+    "password": "uTF52pvs"
+  },
+  "api_endpoints": {
+    "weather": "http://api.open-meteo.com/v1/forecast?latitude=37.3712&longitude=36.0964&current=temperature_2m,relative_humidity_2m,weather_code,wind_speed_10m&timezone=auto",
+    "ntp_servers": [
+      "pool.ntp.org",
+      "time.nist.gov"
+    ]
+  },
+  "radio_stations": [
+    {
+      "name": "KRAL POP",
+      "url": "http://kralpopwmp.radyotvonline.com/kralpopmp3",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "BEST FM",
+      "url": "http://officialbestfm.radyotvonline.net/bestfmofficial",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "SLOW TURK",
+      "url": "http://radyo.yayindakiler.com:4044/;;",
+      "genre": "Slow Muzik"
+    },
+    {
+      "name": "RADYO VIVA",
+      "url": "http://46.20.3.231/radyovivampeg",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "NTV RADYO",
+      "url": "http://ntvrdwmp.radyotvonline.com/ntvradyomp3",
+      "genre": "Haber"
+    },
+    {
+      "name": "RADYO 45LIK",
+      "url": "http://stream.radyo45lik.com:4545/stream",
+      "genre": "Nostalji"
+    },
+    {
+      "name": "KRAL FM",
+      "url": "http://kralfmwmp.radyotvonline.com/kralfmmp3",
+      "genre": "Arabesk"
+    },
+    {
+      "name": "BABA RADYO",
+      "url": "http://officialbestfm.radyotvonline.net/babaradyo",
+      "genre": "Arabesk"
+    },
+    {
+      "name": "RADYO CAN",
+      "url": "http://radyo.yayindakiler.com:4112/;;",
+      "genre": "Turku"
+    },
+    {
+      "name": "RADYO KULUP",
+      "url": "http://radyo.yayin.com.tr:5894/;",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "RADYO MEGA",
+      "url": "http://radyo.yayin.com.tr:4052/;",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "GENC KRAL",
+      "url": "http://radyo.yayindakiler.com:3000/;",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "RADYO EREGLI",
+      "url": "http://radyo.yayindakiler.com:4174/;",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "RADYO EKIN",
+      "url": "http://yayin.turkhosted.com:6006/stream",
+      "genre": "Turku"
+    },
+    {
+      "name": "ISTANBUL FM",
+      "url": "http://radyo.yayin.com.tr:4130/;",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "SHOW RADYO",
+      "url": "http://46.20.3.229/",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "BODRUM FM",
+      "url": "http://live.bodrumfm.org/stream.mp3",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "IZMIR FM",
+      "url": "http://usa4.fastcast4u.com:5414",
+      "genre": "Pop Muzik"
+    },
+    {
+      "name": "DESIBEL 94",
+      "url": "http://95.173.162.184:7350/",
+      "genre": "Pop Muzik"
+    }
+  ]
+}

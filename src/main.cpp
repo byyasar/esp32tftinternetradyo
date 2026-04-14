@@ -7,6 +7,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 #include <time.h>
+#include <SD.h>
 
 // Renk Paleti (Premium UI)
 #define C_BG      0x0000
@@ -31,10 +32,12 @@
 #define VS_MISO   13
 #define VS_SCK    12
 
-#define SD_CS 17
-#define SD_SCK 20
-#define SD_MOSI 18
-#define SD_MISO 19
+#define SD_CS   17
+// SD kart VS1053 ile AYNI HSPI bus paylasiyor → SCK/MOSI/MISO pinleri aynı
+// Donanim: SD kartın SCK=12, MOSI=11, MISO=13 pinlerine baglanmali!
+#define SD_SCK  VS_SCK   // 12
+#define SD_MOSI VS_MOSI  // 11
+#define SD_MISO VS_MISO  // 13
 
 // Touch SPI Pinleri (AYRI BUS!)
 #define TOUCH_CS    1
@@ -47,6 +50,21 @@
 // Touch icin ayri SPI bus
 SPIClass touchSPI(FSPI); // SPI0/FSPI
 XPT2046_Touchscreen ts(TOUCH_CS);
+
+// SD Kart + VS1053 AYNI HSPI bus paylasiyor (ayni fiziksel pinler, farkli CS)
+SPIClass sdSPI(HSPI); // VS1053 ile paylaşılan HSPI
+
+// Cihaz Modu
+enum PlayMode { MODE_RADIO, MODE_SD };
+PlayMode currentMode = MODE_RADIO;
+
+// SD MP3 listesi
+#define MAX_MP3_FILES 50
+String mp3Files[MAX_MP3_FILES];
+int mp3Count = 0;
+int currentMp3 = 0;
+bool sdAvailable = false;
+bool sdPlaying = false;
 
 const char* ssid = "ASUS";
 const char* password = "uTF52pvs";
@@ -92,6 +110,8 @@ int currentStation = 0;
 int totalStations = sizeof(stations) / sizeof(stations[0]);
 int currentVolume = 21; // vs1053 volume (0=max loud, 100=silent)
 
+// vsSPI artık sdSPI ile aynı bus - ayrı tanıma gerek yok
+
 String currentStreamTitle = "";
 String currentStationName = "";
 String weatherString = "Bekleniyor...";
@@ -104,6 +124,40 @@ TFT_eSPI_Button btnVolUp;
 TFT_eSPI_Button btnNext;
 
 VS1053 player(VS1053_CS, VS1053_DCS, VS1053_DREQ, HSPI, VS_MOSI, VS_MISO, VS_SCK);
+
+// Alt klasörler dahil recursive MP3 tarama
+void scanSdMp3Recursive(File dir, String basePath) {
+    while (mp3Count < MAX_MP3_FILES) {
+        File f = dir.openNextFile();
+        if (!f) break;
+        String name = String(f.name());
+        if (f.isDirectory()) {
+            // Alt klasöre gir
+            String subPath = basePath + name + "/";
+            Serial.printf("Klasor: %s\n", subPath.c_str());
+            scanSdMp3Recursive(f, subPath);
+        } else {
+            String upperName = name;
+            upperName.toUpperCase();
+            if (upperName.endsWith(".MP3")) {
+                String fullPath = basePath + name;
+                mp3Files[mp3Count++] = fullPath;
+                Serial.printf("MP3 bulundu: %s\n", fullPath.c_str());
+            }
+        }
+        f.close();
+    }
+}
+
+void scanSdMp3() {
+    mp3Count = 0;
+    if (!sdAvailable) return;
+    File root = SD.open("/");
+    if (!root || !root.isDirectory()) { root.close(); return; }
+    scanSdMp3Recursive(root, "/");
+    root.close();
+    Serial.printf("SD: Toplam %d MP3 dosyasi bulundu\n", mp3Count);
+}
 
 String filterTurkce(String text) {
   text.replace("ı", "i"); text.replace("İ", "I");
@@ -191,15 +245,32 @@ void drawFooter() {
 }
 
 void drawStationInfo() {
-  tft.fillRect(0, 22, 320, 120, C_BG); 
-  String sNameStr = String(sName[currentStation]);
-  printCentered(sNameStr, 40, 3, C_TEXT); 
-  printCentered("KANAL " + String(currentStation + 1) + " / " + String(totalStations), 75, 1, C_ACCENT);
-
-  if(currentStreamTitle.length() > 0) {
-      printCentered(currentStreamTitle.substring(0, 35), 95, 1, TFT_CYAN); 
-  } else if (currentStationName.length() > 0) {
-      printCentered(currentStationName.substring(0, 35), 95, 1, TFT_CYAN);
+  if (currentMode == MODE_RADIO) {
+    tft.fillRect(0, 22, 320, 120, C_BG);
+    String sNameStr = String(sName[currentStation]);
+    printCentered(sNameStr, 40, 3, C_TEXT);
+    printCentered("KANAL " + String(currentStation + 1) + " / " + String(totalStations), 75, 1, C_ACCENT);
+    if(currentStreamTitle.length() > 0) {
+        printCentered(currentStreamTitle.substring(0, 35), 95, 1, TFT_CYAN);
+    } else if (currentStationName.length() > 0) {
+        printCentered(currentStationName.substring(0, 35), 95, 1, TFT_CYAN);
+    }
+  } else {
+    // SD Modu
+    tft.fillRect(0, 22, 320, 120, C_BG);
+    printCentered("SD MUZIK", 35, 2, C_ACCENT);
+    if (mp3Count == 0) {
+        printCentered(sdAvailable ? "MP3 Bulunamadi" : "SD Kart Yok", 65, 1, C_ERROR);
+    } else {
+        String fname = mp3Files[currentMp3];
+        if (fname.length() > 30) fname = fname.substring(0, 27) + "...";
+        printCentered(fname, 65, 1, TFT_CYAN);
+        printCentered(String(currentMp3 + 1) + " / " + String(mp3Count), 85, 1, C_GRAY);
+        if (sdPlaying)
+            printCentered(">>> CALIYOR <<<", 100, 1, C_ACCENT);
+        else
+            printCentered("|| DURDURULDU", 100, 1, C_WARN);
+    }
   }
 }
 
@@ -233,14 +304,61 @@ void drawVuMeter() {
 }
 
 void drawUIButtons() {
-    btnPrev.initButton(&tft, 45, 220, 80, 30, C_HEADER, C_DARK, C_TEXT, (char*)"<< ", 1);
-    btnVolDown.initButton(&tft, 130, 220, 60, 30, C_HEADER, C_DARK, C_WARN, (char*)"VOL-", 1);
-    btnVolUp.initButton(&tft, 190, 220, 60, 30, C_HEADER, C_DARK, C_ACCENT, (char*)"VOL+", 1);
-    btnNext.initButton(&tft, 275, 220, 80, 30, C_HEADER, C_DARK, C_TEXT, (char*)" >>", 1);
+    if (currentMode == MODE_RADIO) {
+        btnPrev.initButton(&tft, 45, 220, 80, 30, C_HEADER, C_DARK, C_TEXT, (char*)"<< ", 1);
+        btnVolDown.initButton(&tft, 130, 220, 60, 30, C_HEADER, C_DARK, C_WARN, (char*)"VOL-", 1);
+        btnVolUp.initButton(&tft, 190, 220, 60, 30, C_HEADER, C_DARK, C_ACCENT, (char*)"VOL+", 1);
+        btnNext.initButton(&tft, 275, 220, 80, 30, C_HEADER, C_DARK, C_TEXT, (char*)" >>", 1);
+    } else {
+        btnPrev.initButton(&tft, 45, 220, 80, 30, C_HEADER, C_DARK, C_TEXT, (char*)"<< ", 1);
+        btnVolDown.initButton(&tft, 130, 220, 60, 30, C_HEADER, C_DARK, C_WARN, (char*)"PLAY", 1);
+        btnVolUp.initButton(&tft, 190, 220, 60, 30, C_HEADER, C_DARK, C_ACCENT, (char*)"DUR", 1);
+        btnNext.initButton(&tft, 275, 220, 80, 30, C_HEADER, C_DARK, C_TEXT, (char*)" >>", 1);
+    }
     btnPrev.drawButton();
     btnVolDown.drawButton();
     btnVolUp.drawButton();
     btnNext.drawButton();
+}
+
+void switchToSD() {
+    player.stop_mp3client();
+    currentMode = MODE_SD;
+    sdPlaying = false;
+    tft.fillScreen(C_BG);
+    drawHeader();
+    drawStationInfo();
+    drawFooter();
+    drawUIButtons();
+}
+
+void switchToRadio() {
+    if (sdPlaying) { player.stop_mp3client(); sdPlaying = false; }
+    currentMode = MODE_RADIO;
+    currentStreamTitle = "";
+    currentStationName = "";
+    tft.fillScreen(C_BG);
+    drawHeader();
+    drawStationInfo();
+    drawFooter();
+    drawUIButtons();
+    printCentered("Baglaniyor...", 110, 1, C_WARN);
+    player.connecttohost(stations[currentStation]);
+}
+
+void playSdFile(int idx) {
+    if (!sdAvailable || mp3Count == 0) return;
+    if (sdPlaying) {
+        player.stop_mp3client();
+        delay(300); // VS1053'ün önceki dosyayı bırakması için bekle
+    }
+    // mp3Files[] zaten tam yolu içeriyor (ör: /muzik/sarki.mp3)
+    String path = mp3Files[idx];
+    if (!path.startsWith("/")) path = "/" + path;
+    Serial.printf("SD Oynat: %s\n", path.c_str());
+    player.connecttoFS(SD, path.c_str());
+    sdPlaying = true;
+    drawStationInfo();
 }
 
 void drawBoot() {
@@ -275,6 +393,8 @@ void setup() {
     ts.begin(touchSPI);
     ts.setRotation(1);
     Serial.println("Touch baslatildi: CS=1 CLK=42 DIN=2 DO=41");
+
+    // SD init VS1053'den once yapilmayacak - VS1053 HSPI'yi hazirlasin once
 
     WiFi.begin(ssid, password);
     drawBootMsg("WiFi Baglaniyor...");
@@ -313,7 +433,26 @@ void setup() {
     delay(100);
 
     player.begin();
-    player.setVolume(21); 
+    player.setVolume(21);
+
+    // VS1053 HSPI'yi basalttiktan sonra SD karti ayni bus'a bagla
+    // sdSPI.begin() cagirmiyoruz - VS1053 zaten HSPI'yi baslatmis durumda
+    // SD_CS=17 farkli oldugu icin cs-based paylaşim calisiyor
+    drawBootMsg("SD Kart Kontrol Ediliyor...");
+    sdSPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+    delay(100);
+    if (SD.begin(SD_CS, sdSPI, 4000000)) {
+        sdAvailable = true;
+        Serial.println("SD Kart OK!");
+        scanSdMp3();
+        Serial.printf("SD: %d MP3 bulundu\n", mp3Count);
+    } else {
+        sdAvailable = false;
+        Serial.println("SD Kart Bulunamadi! (player.begin sonrasi)");
+    }
+    delay(300);
+    drawStationInfo(); // SD durumunu ekranda guncelle
+
     player.connecttohost(stations[currentStation]);
 }
 
@@ -331,92 +470,142 @@ void loop() {
         uint16_t tx = map(p.x, 300, 3800, 320, 0); 
         uint16_t ty = map(p.y, 300, 3800, 240, 0);
         
-        Serial.printf("Touch: raw(%d,%d) -> map(%d,%d)\n", p.x, p.y, tx, ty);
+        Serial.printf("Touch: raw(%d,%d) -> map(%d,%d) mode=%d\n", p.x, p.y, tx, ty, currentMode);
+        lastTouchTime = millis();
 
-        // 4 bolge: sol=PREV, sol-orta=VOL-, sag-orta=VOL+, sag=NEXT
-        if (tx < 80) {
-            // << PREV
-            lastTouchTime = millis();
-            btnPrev.drawButton(true);
-            
-            currentStation--;
-            if (currentStation < 0) currentStation = totalStations - 1;
-            
-            currentStreamTitle = ""; 
-            currentStationName = "";
-            drawStationInfo();
-            drawFooter();
-            printCentered("Baglaniyor...", 110, 1, C_WARN);
-            player.connecttohost(stations[currentStation]);
-            
-            delay(200);
-            btnPrev.drawButton();
+        // Ust alan (header) uzun dokunus = MOD DEGISTIR
+        if (ty < 22) {
+            if (currentMode == MODE_RADIO) {
+                switchToSD();
+            } else {
+                switchToRadio();
+            }
+            return;
         }
-        else if (tx >= 80 && tx < 160) {
-            // VOL- (ses kis)
-            lastTouchTime = millis();
-            btnVolDown.drawButton(true);
-            
-            currentVolume -= 1;  // 0=sessiz, 21=max
-            if (currentVolume < 0) currentVolume = 0;
-            player.setVolume(currentVolume);
-            
-            int pct = map(currentVolume, 0, 21, 0, 100);
-            tft.fillRect(100, 108, 120, 12, C_BG);
-            printCentered("SES: " + String(pct) + "%", 110, 1, C_WARN);
-            drawFooter();
-            
-            delay(150);
-            btnVolDown.drawButton();
-        }
-        else if (tx >= 160 && tx < 240) {
-            // VOL+ (ses ac)
-            lastTouchTime = millis();
-            btnVolUp.drawButton(true);
-            
-            currentVolume += 1;
-            if (currentVolume > 21) currentVolume = 21;
-            player.setVolume(currentVolume);
-            
-            int pct = map(currentVolume, 0, 21, 0, 100);
-            tft.fillRect(100, 108, 120, 12, C_BG);
-            printCentered("SES: " + String(pct) + "%", 110, 1, C_ACCENT);
-            drawFooter();
-            
-            delay(150);
-            btnVolUp.drawButton();
-        }
-        else {
-            // >> NEXT
-            lastTouchTime = millis();
-            btnNext.drawButton(true);
-            
-            currentStation++;
-            if (currentStation >= totalStations) currentStation = 0;
-            
-            currentStreamTitle = "";
-            currentStationName = "";
-            drawStationInfo();
-            drawFooter();
-            printCentered("Baglaniyor...", 110, 1, C_WARN);
-            player.connecttohost(stations[currentStation]);
-            
-            delay(200);
-            btnNext.drawButton();
+
+        if (currentMode == MODE_RADIO) {
+            // ---- RADYO MODU ----
+            if (tx < 80) {
+                // << PREV
+                btnPrev.drawButton(true);
+                currentStation--;
+                if (currentStation < 0) currentStation = totalStations - 1;
+                currentStreamTitle = ""; 
+                currentStationName = "";
+                drawStationInfo();
+                drawFooter();
+                printCentered("Baglaniyor...", 110, 1, C_WARN);
+                player.connecttohost(stations[currentStation]);
+                delay(200);
+                btnPrev.drawButton();
+            }
+            else if (tx >= 80 && tx < 160) {
+                // VOL-
+                btnVolDown.drawButton(true);
+                currentVolume -= 1;
+                if (currentVolume < 0) currentVolume = 0;
+                player.setVolume(currentVolume);
+                int pct = map(currentVolume, 0, 21, 0, 100);
+                tft.fillRect(100, 108, 120, 12, C_BG);
+                printCentered("SES: " + String(pct) + "%", 110, 1, C_WARN);
+                drawFooter();
+                delay(150);
+                btnVolDown.drawButton();
+            }
+            else if (tx >= 160 && tx < 240) {
+                // VOL+
+                btnVolUp.drawButton(true);
+                currentVolume += 1;
+                if (currentVolume > 21) currentVolume = 21;
+                player.setVolume(currentVolume);
+                int pct = map(currentVolume, 0, 21, 0, 100);
+                tft.fillRect(100, 108, 120, 12, C_BG);
+                printCentered("SES: " + String(pct) + "%", 110, 1, C_ACCENT);
+                drawFooter();
+                delay(150);
+                btnVolUp.drawButton();
+            }
+            else {
+                // >> NEXT
+                btnNext.drawButton(true);
+                currentStation++;
+                if (currentStation >= totalStations) currentStation = 0;
+                currentStreamTitle = "";
+                currentStationName = "";
+                drawStationInfo();
+                drawFooter();
+                printCentered("Baglaniyor...", 110, 1, C_WARN);
+                player.connecttohost(stations[currentStation]);
+                delay(200);
+                btnNext.drawButton();
+            }
+        } else {
+            // ---- SD MUZIK MODU ----
+            if (tx < 80) {
+                // << Onceki dosya
+                btnPrev.drawButton(true);
+                if (mp3Count > 0) {
+                    currentMp3--;
+                    if (currentMp3 < 0) currentMp3 = mp3Count - 1;
+                    playSdFile(currentMp3);
+                }
+                delay(200);
+                btnPrev.drawButton();
+            }
+            else if (tx >= 80 && tx < 160) {
+                // PLAY
+                btnVolDown.drawButton(true);
+                if (mp3Count > 0 && !sdPlaying) {
+                    playSdFile(currentMp3);
+                }
+                delay(150);
+                btnVolDown.drawButton();
+            }
+            else if (tx >= 160 && tx < 240) {
+                // DUR
+                btnVolUp.drawButton(true);
+                if (sdPlaying) {
+                    player.stop_mp3client();
+                    sdPlaying = false;
+                    drawStationInfo();
+                }
+                delay(150);
+                btnVolUp.drawButton();
+            }
+            else {
+                // >> Sonraki dosya
+                btnNext.drawButton(true);
+                if (mp3Count > 0) {
+                    currentMp3++;
+                    if (currentMp3 >= mp3Count) currentMp3 = 0;
+                    playSdFile(currentMp3);
+                }
+                delay(200);
+                btnNext.drawButton();
+            }
         }
     }
 
-    // Stream bilgisi guncelleme + Baglaniyor yazisini temizleme
-    static unsigned long lastInfo = 0;
-    if (millis() - lastInfo > 3000) {
-        lastInfo = millis();
-        // Baglaniyor veya SES yazisini temizle ve stream title ile degistir
-        tft.fillRect(0, 105, 320, 15, C_BG); 
-        if(currentStreamTitle.length() > 0) {
-            printCentered(currentStreamTitle.substring(0, 35), 110, 1, TFT_CYAN);
-        } else if (player.isRunning()) {
-            printCentered("Caliyor", 110, 1, C_ACCENT);
+    // Radyo: Stream bilgisi guncelleme
+    if (currentMode == MODE_RADIO) {
+        static unsigned long lastInfo = 0;
+        if (millis() - lastInfo > 3000) {
+            lastInfo = millis();
+            tft.fillRect(0, 105, 320, 15, C_BG);
+            if(currentStreamTitle.length() > 0) {
+                printCentered(currentStreamTitle.substring(0, 35), 110, 1, TFT_CYAN);
+            } else if (player.isRunning()) {
+                printCentered("Caliyor", 110, 1, C_ACCENT);
+            }
         }
+    }
+
+    // SD: Dosya bitince sonrakini cal
+    if (currentMode == MODE_SD && sdPlaying && !player.isRunning()) {
+        currentMp3++;
+        if (currentMp3 >= mp3Count) currentMp3 = 0;
+        delay(500);
+        playSdFile(currentMp3);
     }
 
     // Saat guncelleme
@@ -425,6 +614,13 @@ void loop() {
         lastTimeHeader = millis();
         updateTimeStrings();
         drawHeader();
+        // SD modunda mod etiketi goster
+        if (currentMode == MODE_SD) {
+            tft.setTextColor(C_ACCENT);
+            tft.setTextSize(1);
+            tft.setCursor(130, 7);
+            tft.print("[SD MUZIK]");
+        }
     }
 
     // Hava durumu guncelleme (saatte bir)
