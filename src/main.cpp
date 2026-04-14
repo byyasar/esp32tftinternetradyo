@@ -24,18 +24,25 @@
 #define VS1053_CS     10
 #define VS1053_DCS     9
 #define VS1053_DREQ    8
-#define VS1053_RST    18 
+#define VS1053_RST    4 
 
 // VS1053 SPI Pinleri
 #define VS_MOSI   11
 #define VS_MISO   13
 #define VS_SCK    12
 
+#define SD_CS 17
+#define SD_SCK 20
+#define SD_MOSI 18
+#define SD_MISO 19
+
 // Touch SPI Pinleri (AYRI BUS!)
 #define TOUCH_CS    1
 #define TOUCH_CLK   42
 #define TOUCH_DIN   2   // MOSI
 #define TOUCH_DO    41  // MISO
+
+
 
 // Touch icin ayri SPI bus
 SPIClass touchSPI(FSPI); // SPI0/FSPI
